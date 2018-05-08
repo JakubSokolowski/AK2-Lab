@@ -1,0 +1,230 @@
+\documentclass[11pt]{report}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{mathptmx}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{advdate}
+\usepackage[none]{hyphenat}
+\selectlanguage{polish}
+\usepackage[left=2.5cm,top=2.5cm,right=2.5cm,bottom=2.5cm,bindingoffset=0.5cm]{geometry}
+
+\title{Sprawozdanie AK2 lab3}
+\date{\today}
+\author{Jakub Sokołowski}
+\newcommand{\LabNum}{3}
+\setcounter{chapter}{\LabNum}
+\begin{document}
+\noindent
+Jakub Sokołowski, 226080
+  \hfill Wrocław, dn.\ {\AdvanceDate[-1]\today}\\
+WT-N-07\hfill  prowadzący: Aleksandra Postawka\\
+\vspace{1cm}
+\begin{center}
+  \begin{Large}
+  	Laboratorium Architektury Komputerów\\
+    \emph{(\LabNum) Operacje na plikach z użyciem wywołań systemowych\\}
+  \end{Large}
+\end{center}
+
+
+\section{Treść ćwiczenia}
+\label{sec:tresc-cwiczenia}
+\textbf{Zakres i program ćwiczenia:}\\
+Odczytywanie liczb w reprezentacji czwórkowej, i działania na tych liczbach z 
+wykorzystaniem wywołań systemowych \textit{open}, \textit{write} i \textit{close} do operacji na plikach w systemie linux.
+\\
+\\
+\textbf{Zrealizowanie zadania:}
+\begin{itemize}[leftmargin=*,topsep=0pt]
+	\item Wczytanie z pliku 2 dużych liczb w reprezentacji czwórkowej (\textit{ASCII})
+	\item Wpisanie liczb do pamięci (\textit{little endian})
+	\item Wykonanie dodawania liczb z użyciem rejestrów 8-bajtowych, flagi CF oraz stosu
+	\item Zamiana wartości wyniku dodawania na ciąg znaków w reprezentacji szesnastkowej
+	\item Zapis wyniku do pliku
+\end{itemize}
+\newpage
+\section{Przebieg ćwiczenia}
+\label{sec:przebieg-cwiczenia}
+\subsection{Wczytanie liczb z pliku wejściowego}
+Żeby odczytać dane z pliku, najpierw trzeba go otworzyć. Do otwierania plików, używane jest wywołanie systemowe \textit{open} (dla X86\_64 kod tego wywołania wynosi 2). Wywołanie te ma trzy dodatkowe argumenty - nazwe pliku, tryb otwarcia i uprawnienia. Uprawnienia, to trzycyfrowa liczba określająca dostęp różnych użytkowników do pliku. Każda operacja którą można wykonać na pliku ma swoją cyfrę: 1 - prawo do uruchomienia, 2 - prawo do zapisu i 4 prawo do odczytu (0 oznacza brak uprawnień). Suma tych cyfr daje uprawnienia dla użytkownika, np. uprawnienie do odczytu i zapisu to suma wartości tych uprawnień, czyli 6. Pierwsza cyfra liczby określa prawa właściciela pliku, druga - grupy do której on należy, a trzecia wszystkich pozostałych użytkowników. Po użyciu \textit{open}, w rejestrze \textit{\%rax} znajdzie się deskryptor otworzonego pliku, który następnie jest przekazywany do wywołania \textit{read} w celu odczytania danych. Każdy otwarty pliku należy zamknąc przed zakończeniem programu, co osiągane jest za pomocą wywołania \textit{close}, które jako argument przyjmuje deskryptor otwartego pliku.
+\begin{verbatim}
+open_in:
+  # Otworzenie pliku wejściowego
+  mov $SYSOPEN, %rax # Kod wywołania systemowego SYSOPEN=2
+  mov $FILE_IN, %rdi # Nazwa pliku
+  mov $READ,    %rsi # Tryb otwarcia READ=0
+  mov $0,       %rdx # Uprawnienia pliku - brak, założenie, że plik istnieje
+  syscall
+  mov %rax, %r8      # Zapisanie deskryptora pliku wejściwego
+
+read_in:
+  # Wczytanie zawartości pliku do bufora
+  movq $READ,        %rax
+  movq %r8,          %rdi
+  movq $IN_BUF,      %rsi
+  movq $BUFFOR_SIZE, %rdx
+  syscall
+
+  mov %rax, %r9		  # Zapisanie liczby odczytanych bajtów
+  mov $0, %rax
+  mov $0, %rbx
+  
+close_in:
+  # Kiedy plik przestanie być potrzebny, należy go zamknąć
+  mov $SYSCLOSE, %rax # Kod wywołania
+  mov %r8, %rdi       # Deskryptor otwartego pliku
+  syscall
+\end{verbatim}
+\newpage
+\subsection{Zapis w kolejności little endian}
+Przed dodaniem odczytanych liczb, należy zapisać je w pamięci w kolejności \textit{little endian} - najmniej znaczący bajt jest umieszczany jako pierwszy. Bufor wejściowy jest przetwarzany iterując po bajtach od końca. Żeby zachować kolejność cyfr, za pomocą operacji \textit{shr} i \textit{or} odwracana jest kolejność 2-bitowych znaków liczby w każdym bajcie, a następnie bajt ten jest umieszczany w kolejnym wolnym miejscu bufora liczby (zaczynając od początku bufora). Druga liczba przetwarzana jest tak samo.
+\begin{verbatim}
+read_first_number:  
+  mov $0,   %rax     
+  mov %r9,  %rdi     # Skopiowanie liczby bajtów do licznika
+  sub $2,   %rdi     # Indeks ostatniego znaku drugiej liczby w IN_BUF
+  mov $0,   %rsi     # Początek FIRST_NUM_BUFF
+  mov $0,   %rcx     # Wartość przesunięcia
+  mov $0,   %r10     # Długość pierwszej liczby (bity)
+  
+  read_char:
+    # Wczytanie do rejestru 4 2-bitowych znaków
+    mov IN_BUF(,%rdi,1), %al  # Wczytanie znaku do al
+    cmp $0xa,  %al            # Sprawdzenie, czy znak to '\n' - separator liczb
+    je write_last
+    add $2, %r10
+    sub $0x30, %al            # Zakładamy że znak jest cyfrą
+                              # Konwersja znaku na cyfrę przez odjęcie '0'
+    cmp $6, %rcx              # Wartość przesunięcia równa 0, wskazuje że %al   
+    jg write_byte             # jest pełny, i można zapisać kolejny bajt
+    shlb %cl, %al             # Każda cyfra zapisana jest na 2 bitach
+                              # Wydobycie tych dwóch bitów przez przesunięcie
+    or %al, %bl               # i "sklejenie" za pomocą shl i or
+    add $2, %cl               # Zwiększenie wartości przesunięcia
+    dec %rdi
+    jmp read_char
+    
+  write_byte:
+  	# W %bl znajdują się teraz 2 znaki w reprezentacji 16-kowej
+  	# Gotowy bajt wstawiany jest do bufora, a rejestry potrzebne
+  	# do kolejnej iteracji pętli są resetowane  	
+    mov %bl, FIRST_NUM_BUFF(,%rsi,1)
+    mov $0, %bl
+    inc %rsi
+    mov $0, %rcx
+    jmp read_char
+    
+  write_last:
+    mov %bl, FIRST_NUM_BUFF(,%rsi,1)
+    mov $0, %bl
+    mov $0, %rsi
+    mov $0, %rcx
+\end{verbatim}
+\subsection{Dodanie liczb}
+Po zapisaniu do pamięci liczb w poprawnej kolejności, można przystąpić do dodawania. Żeby zapewnić poprawną propagację przeniesienia, wykorzystywana jest instrukcja \textit{adc}, która bierze pod uwagę flage przeniesienia (CF). Ta sama flaga jest modyfikowana podczas instrukcji \textit{cmp} która jest wykonywana podczas pętli. W celu zachowania wartości CF, po dodaniu liczb rejestr flagowy umieszczany jest na stosie za pomocą instrukcji \textit{pushfq}, a przed dodaniem jest pobierany ze stosu za pomocą instrukcji \textit{popfq}. Ponieważ bufory liczb mają po 512 bajtów, a dodawanie jest wykonywane w rejestrach 64 bitowych, pętla dodawania wykona co najwyżej 64 iteracje.
+\begin{verbatim}
+add_numbers:
+  clc           # Ustawienie flagi CF na 0
+  pushfq        # Umieszczenie rejestru flag na stosie
+  mov $0, %rsi
+  
+  add_loop:
+    mov FIRST_NUM_BUFF(, %rsi, 8), %rax
+    mov SECOND_NUM_BUFF(, %rsi, 8), %rbx
+    popfq           # Pobranie rejestru flag ze stotsu
+    adc %rbx, %rax  # Dodanie liczb z uwzględnieniem flagi przeniesienia
+    pushfq          # Umieszczenie rejestru flag na stosie
+    mov %rax, OUT_BUF(,%rsi, 8)
+    inc %rsi
+    cmp $64, %rsi
+    jl add_loop
+\end{verbatim}
+\subsection{Konwersja na reprezentację szesnastkową}
+Ponieważ wynik dodawania jest zapisany jako ciąg binarny, konwersja jest stosunkowa prosta - należy pogrupować ten ciąg w grupy po 4 bity, i wstawić znak odpowiadający danej cyfrze w grupie do bufora wyjściowego.
+\begin{verbatim}
+convert_loop:
+  mov OUT_BUF(,%rdi, 1), %al     # Wstawienie kolejnego bajtu do %al
+  mov %al, %bl						
+  shr $4, %bl
+  and $0b1111, %al               # W %al znajdą się pierwsze 4 bity  
+  and $0b1111, %bl               # a w %bl ostatnie
+  mov HEX_CHARS(,%rax,1), %cl    # Wstawienie znaku odpowiadającego cyfrze do %cl
+  mov %cl, OUT_HEX_BUF(,%rsi,1)  # Wstawienie %cl do bufora wyjściowego
+  inc %rsi
+  mov HEX_CHARS(,%rbx,1), %cl
+  mov %cl, OUT_HEX_BUF(,%rsi,1)
+  inc %rsi
+  inc %rdi
+  cmp $512, %rdi
+  jl convert_loop
+\end{verbatim}
+\subsection{Odwrócenie bufora wyjściowego}
+W buforze wyjściowym znajduje się teraz odwrócony wynik dodawania, który jest zakończony ciągiem zer (bufory traktowane są jak liczby, nawet jeśli są w nich same zera). W celu zapisania prawidłowego wyniku do pliku, należy pozbyć się tych zer, i odwrócić kolejność cyfr.
+\begin{verbatim}
+reverse_out:
+  mov $0, %rsi             
+  mov $512, %rdi
+  mov $0, %rax
+  mov $0, %rbx
+  mov $0, %rcx             # Jeśli %rcx jest równy 1, znaczy że obecny znak jest już 
+                           # cyfrą liczby, nawet jeśli jest równy 0
+  reverse_loop:
+    cmp $0 ,%rdi
+    jl end_reverse
+    mov OUT_HEX_BUF(,%rdi,1), %al
+    dec %rdi
+    cmp $'0', %al          # Jeśli znak nie jest zerem, to jest cyfrą liczby
+    jne place_char
+    cmp $0, $rcx           # Jeśli znak jest zerem, i %rcx jest równe 1, to jest
+    je reverse_loop        # cyfrą liczby
+    
+    place_char:
+      mov $1, %rcx
+      mov %al, OUT_BUF(,%rsi,1)
+      inc %rsi
+      jmp reverse_loop
+      
+  end_reverse:
+    movb $0x0A, OUT_BUF(,%rsi,1) # Wstawienie znaku nowej lini na koniec bufora
+    inc %rsi
+    mov $0, %rdi
+    mov %rsi, %rbx         # Ostateczna długość bufora wyjściowego
+
+\end{verbatim}
+\newpage
+\subsection{Zapis wyniku do pliku}
+Zapisywanie do pliku za pomocą wywołania systemowego wymaga trzech argumentów: deskryptora pliku, do którego chcemy zapisać, wskaźnika na początek bufora, oraz rozmiaru tego bufora.
+Deskryptor pliku uzyskujemy tak samo jak w przypadku pliku wejściowego, za pomocą wywołania \textit{open}. Długość bufora została obliczona w poprzednim kroku, i znajduje się w rejestrze \textit{\%rbx}.
+\begin{verbatim}
+open_out:
+  # Otworzenie pliku wyjściowego za pomocą wywołania systemowego open
+  mov $SYSOPEN,  %rax
+  mov $FILE_OUT, %rdi 
+  mov $FWRITE,   %rsi 
+  mov $0644,     %rdx  # Prawa dostępu do pliku - właściciel musi mieć prawo do zapisu
+  syscall
+  mov %rax, %r9        # Zapisanie deskryptora pliku wyjściowego
+  
+write_out:
+  # Zapis do pliku
+  movq $SYSWRITE,    %rax
+  movq %r9,          %rdi
+  movq $OUT_BUF,     %rsi
+  movq %rbx,         %rdx
+  
+close_out:
+  # Zamknięcie pliku wyjściowego
+  mov $SYSCLOSE, %rax # Pierwszy parametr - numer wywołania
+  mov %r9, %rdi       # Drugi parametr - ID otwartego pliku
+  mov $0, %rsi
+  mov $0, %rdx
+  syscall
+\end{verbatim}
+\section{Wnioski}
+Podczas operacji na plikach, trzeba szczególnie uważać na ich uprawnienia, ponieważ można przypadkowo utworzyć plik, którego obecny użytkownik nie będzie mógł odczytać.\\
+Zamiana kolejności z big endian na little endian, w retrospekcji, mogła być zrealizowana za pomocą gotowych instrkucji służących do tego celu takich jak \textit{bswp}.
+\label{sec:wnioski}
+\end{document}
