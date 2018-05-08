@@ -63,7 +63,6 @@ read_first_number:
   mov $0,   %rcx     # Wartość przesunięcia
   mov $0,   %r10     # Długość pierwszej liczby (bity)
 
-  # Read the base 4 numbers from file, and write it to buffers as hex number
   # Wczytanie liczb o podstawie 4 z pliku, i wpisanie ich do bufora jako
   # liczby o podstawie 16 w konwencji Little Endian.
   # Przykładowa liczba w 4: 1231 2123, bin: 01101101 10011011
@@ -185,17 +184,22 @@ reverse_out:
   mov $0, %rsi
   mov $512, %rdi
   mov $0, %rax
-  mov $0 ,%rbx
+  mov $0, %rbx
+  mov $0, %rcx
   reverse_loop:
     cmp $0 ,%rdi
     jl end_reverse
     mov OUT_HEX_BUF(,%rdi,1), %al
     dec %rdi
     cmp $'0', %al
+    jne place_char
+    cmp $0, $rcx
     je reverse_loop
-    mov %al, OUT_BUF(,%rsi,1)
-    inc %rsi
-    jmp reverse_loop
+    place_char:
+      mov $1, %rcx
+      mov %al, OUT_BUF(,%rsi,1)
+      inc %rsi
+      jmp reverse_loop
   end_reverse:
    movb $0x0A, OUT_BUF(,%rsi,1)
    inc %rsi

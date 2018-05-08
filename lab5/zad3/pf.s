@@ -8,10 +8,10 @@ square_root:
     pushq %rbp
     movq %rsp, %rbp
     mov %eax, %ebx
-    cvtsi2sd %eax, %xmm0
+    cvtsi2sd %eax, %xmm0 # (double)int
     call sqrt
     movq %xmm0, %rax
-    cvttsd2si %xmm0, %eax
+    cvttsd2si %xmm0, %eax # (float)double
     xchg %eax, %ebx
     end_square_root:
         movq %rbp, %rsp
@@ -54,6 +54,9 @@ prime_factors:
             # rdi - rbx
             cmp %rbx, %rdi
             jg check_last
+            # while (n%i == 0)
+            # add i to factors
+            # n = n/i        
             division_loop:
                 mov $0, %edx
                 mov %rax, %r11
@@ -70,6 +73,7 @@ prime_factors:
             next_iter:
                 add $2, %rdi
                 jmp odd_num_loop 
+    # n is a prime number greater than 2
     check_last:
     cmp $2, %rax
     jle end
