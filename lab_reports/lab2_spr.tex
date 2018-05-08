@@ -1,0 +1,281 @@
+\documentclass[11pt]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{mathptmx}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{advdate}
+\usepackage[none]{hyphenat}
+\selectlanguage{polish}
+\usepackage[left=2.5cm,top=2.5cm,right=2.5cm,bottom=2.5cm,bindingoffset=0.5cm]{geometry}
+
+
+
+\title{Sprawozdanie AK2 lab2}file:///home/jakub/Documents/Studia/Urlop_2/AK2/lab/sprawozdania/ak2_projekt.tex
+
+\date{08-04-2018}
+\author{Jakub Sokołowski}
+\newcommand{\LabNum}{1}
+\setcounter{chapter}{\LabNum}
+\begin{document}
+
+
+\noindent
+  Jakub Sokołowski, 226080
+  \hfill Wrocław, dn.\ {\AdvanceDate[-1]\today}\\
+\hfill
+\noindent
+WT-N-07\hfill  prowadzący: Aleksandra Postawka\\
+\vspace{1cm}
+\begin{center}
+  \begin{Large}
+  	Laboratorium Architektury Komputerów\\
+    \emph{(\LabNum) Proste konstruckje programowe z użyciem\\
+    instrukcji asemblera}
+  \end{Large}
+\end{center}
+
+
+\section{Treść ćwiczenia}
+\label{sec:tresc-cwiczenia}
+\textbf{Zakres i program ćwiczenia:}\\
+Wykorzystanie prostych konstrukcji (pętle, badanie warunków) do operacji na ciągach znaków podawanych przez użytkownika. Ciąg znaków jest traktowany jako liczba w systemie \textbf{U8}.
+\textbf{Zrealizowanie zadania:}
+\begin{itemize}[leftmargin=*]
+	\item Wczytanie ze \textbf{stdin} liczb w reprezentacji \textbf{ U8 (ASCII)}
+	\item Sprawdzenie wczytanego ciągu znaków
+	\item Wypisanie liczby na \textbf{stdout} w reprezentacji \textbf{U6}
+\end{itemize}
+\section{Przebieg ćwiczenia}
+\label{sec:przebieg-cwiczenia}
+\subsection{Wczytanie i weryfikacja znaków ASCII}
+Pierwszym etapem programu było odczytanie znaków \textbf{ASCII} ze standardowego strumienia wejściowego (\textbf{stdin}) i zapisanie ich w pamięci jako liczby, na których było by możliwe wykonywanie późniejszych operacji matematycznych. Znaki odczytano za pomocą funkcji systemowej \textbf{read}.
+\begin{verbatim}
+# Wstawienie argumentów potrzebnych do funkcji read do odpowiednich rejestrów 
+# IN_BUF został zadeklarowany w sekcji .bss jako .lcomm IN_BUF, 512
+
+movq $SYSREAD,     %rax    # %rax - 0 - kod funkcji read
+movq $STDIN,       %rdi    # %rdi - deskryptor pliku
+movq $IN_BUF,      %rsi    # %rsi - początek bufora
+movq $BUFFOR_SIZE, %rdx    # %rdx - rozmiar bufora
+syscall
+
+movq %rax, %r8             # Zapisanie liczby odczytanych bajtów do %r8
+dec %r8                    # Znak '\n' nie jest brany pod uwagę
+\end{verbatim}
+\newpage
+\noindent
+Po wczytaniu do bufora należy zweryfikować, czy znaki należą do prawidłowych znaków systemu \textbf{U8} - mogą to być tylko liczby w zakresie 0-7. Konwersja znaku \textbf{ASCII} na liczbę jest realizowana przez odjęcie wartości znaku '0' (\textbf{0x30}) od danego znaku. Otrzymana po odjęciu wartość musi znajdować się w zakresie 0-7. W przypadku natrafienia na nieprawidłowy znak, na \textbf{stdout} wypisywany jest komunikat o błędzie.
+\begin{verbatim}
+  movq $0, %rdi               # Reset licznika używanego w pętli
+  
+validation_loop:
+  cmp %r8, %rdi               # Pętla zakończona, gdy osiągnięto przedostatni znak
+  je negativity_check
+  mov $0, %rax
+  mov IN_BUF(, %rdi, 1), %al  # Zapisanie pojedynczego znaku z bufora do %al
+  sub $0x30, %al              # Odjęcie wartości znaku '0' od znaku w %al
+                              # w celu otrzymania cyfry
+
+  cmp $8, %al                 # Wartość w %al musi być pomiędzy 0-7
+  jge write_err_msg           # Błąd, gdy jest większa niż 7
+  cmp $0, %al                 # lub mniejsza niż 0
+  jl write_err_msg
+  # Znak zweryfikowany, zapisanie go do tablicy NUM_ARR i zwiększenie licznika
+  mov %al, NUM_ARR(, %rdi, 4)
+  inc %rdi
+  jmp validation_loop
+\end{verbatim}
+\subsection{Obsługa liczb ujemnych}
+Do obliczenia wartości danej liczby w systemie \textbf{U6} potrzebna będzie wartość bezwzględna tej liczby. W przypadku liczby ujemnej w systemie uzupełnieniowym, będzie to wymagało obliczenia jej dopełnienia. Najpierw trzeba sprawdzić, czy dana liczba jest ujemna czy dodatnia.
+\begin{verbatim}
+negativity_check:
+  mov $0, %rdi                   # Indeks wskazujący na pierwszą cyfre w tablicy
+  cmp $3, NUM_ARR(, %rdi, 4)     # Jeśli jest w zakresie 4-7 - liczba jest ujemna
+  jge is_negative
+  jmp is_positive
+\end{verbatim}
+Informacja o znaku liczby jest umieszczana w \textbf{\%r11}. Jeśli jest ujemna, trzeba obliczyć jej dopełnienie, a następnie uzupełnienie.
+\begin{verbatim}
+complement_loop:
+  # Pętla po wszystkich cyfrach w tablicy 
+  cmp %r8, %rdi              
+  je increment_last          # Zwiększenie ostatniej cyfry o 1
+  mov $7, %eax               # Wstawienie największej cyfry o danej podstawie do %eax
+  sub NUM_ARR(,%rdi,4), %eax # Odjęcie obecnej cyfry od największej - dopełnienie cyfry
+  mov %eax, NUM_ARR(,%rdi,4) # Wstawienie dopełnienia do tablucy
+  inc %rdi					
+  jmp complement_loop
+\end{verbatim}
+\newpage
+\noindent
+Po obliczeniu dopełnienia należy obliczyć uzupełnienie - dodać 1 do ostatniej cyfry liczby. Jeśli po dodaniu cyfra wynosi 7, zostaje ona ustawiona na 0, a zwiększana jest poprzednia cyfra.
+\begin{verbatim}
+increment_last:
+  # Zmniejszenie indeksu, tak aby wskazywał na ostatnią cyfrę NUM_ARR - odwrotna pętla
+  dec %rdi 
+  increment_loop:
+    mov NUM_ARR(,%rdi,4), %eax  # Wstawienie obecnej cyfry do %eax
+    cmp $7, %eax                # Sprawdzenie, czy jest maksymalną
+    jne increment_digit	        # Jeśli nie, zwiększ ją
+    mov $0, %eax                # Maksymalna - ustawienie na 0
+    mov %eax, NUM_ARR(, %rdi,4) # Wstawienie z powrotem do tablicy
+    dec %rdi                    # Zmniejszenie licznka
+    jmp increment_loop          # Zwiększenie poprzedniej liczby
+
+	increment_digit:
+      # Zwiększenie obecnej liczby o 1 i wstawienie jej do tablicy
+      inc %eax
+      mov %eax, NUM_ARR(, %rdi,4)
+      mov $0, %rdi
+      jmp convert_to_decimal
+\end{verbatim}
+\subsection{Konwersja na U10}
+Wartość bezwzględna liczby jest teraz zapisana jako tablica cyfr tej liczby. Wartość dziesiętna, to suma jej cyfr pomnożonych przez podstawę systemu, podniesioną do wagi danej cyfry.
+\begin{verbatim}
+convert_to_decimal:
+  # Odwrotna pętla po NUM_ARR
+  mov %r8, %rdi   # Wstaw rozmiar NUM_ARR do %rdi
+  dec %rdi
+  mov $0, %r9     # Wynik konwersji w %r9
+  mov $1, %rsi    # Pierwsza wartość podstawa ^ waga jest równa 1
+  mov %rsi, %r10  # Waga cyfry
+  mov $0, %rax    
+  mov $U8_BASE, %rbx
+  
+  add NUM_ARR(,%rdi, 4), %r9	# Dodanie ostatniej cyfry do wyniku
+  dec %rdi
+\end{verbatim}
+\newpage
+\noindent
+Po wstawieniu wszystkich potrzebnych wartości do rejestrów i obliczeniu wartości na ostatniej pozycji, trzeba obliczyć wartości na pozostałych pozycjach.
+\begin{verbatim}
+multiplication_loop:
+  cmp $0, %rdi
+  jl convert_to_base
+  mov NUM_ARR(,%rdi,4), %eax 
+  # Mnożenie przez podstawę aż wartość na pozycji zostnie obliczona
+  compute_base_exponent:	 
+  cmp $0, %r10               
+  je finished_multiplication
+  mul %rbx                   # Pomnożenie obecnej wartości przez podstawę
+  dec %r10					  # Zmniejszenie licznikas
+  jmp compute_base_exponent
+  
+  finished_multiplication:  
+    # Wartość cyfra * podstawa ^ waga znajdue się w %rax
+    # Dodaj wartość na pozycji do wyniku końcowego    
+    add %rax, %r9
+    inc %rsi                 # Następna pozycja ma wagę większą o 1
+    mov %rsi, %r10           # Umieść tą wartość w liczniku pętli
+    dec %rdi                 # Zmniejsz indeks NUM_ARR
+    jmp multiplication_loop
+\end{verbatim}
+\subsection{Konwersja na U6}
+Wartość w systemie U6 obliczana za pomocą standardowego algorytmu i zapisywana do tablicy REV\_NUM\_ARR, którą następne należy odwrócić, by uzyskać prawidłowy wynik.
+\begin{verbatim}
+convert_to_base:
+  # r8  - Rozmiar NUM_ARR
+  # r9  - Wartość dziesiętna liczby
+  # r10 - Podstawa U6
+  # rdi - Pozycja w REV_ARR
+  # r11 - Znak
+  # rax - Wynik dzielenia
+  # rdx - Reszta z dzielenia
+  mov $0, %rdi       # Obecny indeks w REV_ARR to 0
+  mov $U6_BASE, %r10 
+  mov %r9, %rax      # Wstawienie liczby do %rax w celu wykonania dzielenia
+\end{verbatim}
+\newpage
+\noindent
+\begin{verbatim}
+division_loop:
+  mov $0, %edx                   # Wyzerowanie %edx przed dzieleniem
+  div %r10                       # Dzielenie liczby przez podstawę
+                                 # Wartość na pozycji to reszta z dzielenia - %rdx
+  mov %edx, REV_NUM_ARR(,%rdi,4) # Wstawienie cyfry do REV_NUM_ARR
+  inc %rdi
+  cmp %rax, %r10                 # Sprawdzenie warunku zatrzymania wynik < podstawa
+  jle division_loop              # Wynik > podstawa, kontynuacja pętli
+  
+  # Osiągnięty warunek zatrzymania - do REV_NUM_ARR wstawiony jest wynik z dzielenia
+  mov %eax, REV_NUM_ARR(,%rdi,4)
+  mov %rdi, %r8                  # Zapisanie rozmiaru tablicy
+  
+# Wpisanie wartości z REV_NUM_ARR w odwrotnej kolejności do NUM_ARR
+reverse_array:
+  mov $0 ,%eax
+  mov $0, %rsi
+  
+  reverse_loop:
+    cmp $0, %rdi
+    jl complement_result
+    mov REV_NUM_ARR(,%rdi,4), %eax
+    mov %eax, NUM_ARR(,%rsi,4)
+    inc %rsi
+    dec %rdi
+    jmp reverse_loop
+\end{verbatim}
+W przypadku liczb dodatnich pozostaje jedynie wypisanie wyniku konwersji na ekran, natomiast dla liczb ujemnych trzeba jeszcze raz obliczyć uzupełnienie.
+\newpage
+\noindent
+\subsection{Wypisanie wyniku na wyjście}
+Istnieją 3 warianty zakończenia programu - wypisania komunikatu o błędzie, wypisanie liczby dodatniej i wypisanie liczby ujemnej. W przypadku liczby ujemnej przed wartością jest wypisywane rozszerzenie - dla systemu \textbf{U6} jest to '(5)'. Pisanie do \textbf{stdout} jest realizowane za pomocą funkcji sytemowej \textbf{write}. Przed wypisaniem należy przekonwertować cyfry na \textbf{ASCII}, co uzyskiwane jest przez dodanie wartości znaku '0' do każdej cyfry.
+\begin{verbatim}
+int_to_ascii:
+  mov $0, %rdi
+  ascii_loop:
+    cmp %r8, %rdi               
+    jg write_outpt
+    mov $0, %rax
+    mov NUM_ARR(, %rdi, 4), %rax  
+    add $0x30, %rax               
+    mov %al, OUT_BUF(, %rdi, 1)
+    inc %rdi
+    jmp ascii_loop
+\end{verbatim}
+Jako że funkcja write pojawia się za każdym razem, zostanie opisany tylko przypadek l. ujemnej.
+\begin{verbatim}
+# Wypisanie zawartości OUT_BUF na stdout
+write_outpt:
+  mov %rdi, %r10
+  cmp $0, %r11
+  je after_prefix
+  movq $SYSWRITE,     %rax   # %rax - 1 - kod funkcji write
+  movq $STDOUT,       %rdi   # %rdi - deskryptor pliku
+  movq $prefix,       %rsi   # %rsi - początek bufora
+  movq $prefix_size,  %rdx   # %rdx - rozmiar bufora
+  syscall
+
+after_prefix:
+  mov %r10, %rdi
+  movb $NEWLINE, OUT_BUF(, %rdi, 1)
+  movq $SYSWRITE,    
+  movq $STDOUT,       
+  movq $OUT_BUF,      
+  movq $BUFFOR_SIZE,  
+  syscall
+
+  movq $SYSWRITE,   
+  movq $STDOUT,      
+  movq $NEWLINE,     
+  movq $1,  %rdx
+  syscall
+  jmp end
+\end{verbatim}
+\subsection{Uruchamianie programu}
+Program został skompilowany i skonsolidowany za pomocą poniższego makefila:
+\begin{verbatim}
+lab1 : lab1.o
+  ld  -o lab1 lab1.o
+lab1.o : lab1.s
+  as -gstabs -o lab1.o lab1.s
+\end{verbatim}
+W celu umożliwienia wygodniejszej pracy z debuggerem \textbf{gdb} została użyta flaga \textbf{-gstabs} która generuje informacje do debuggowania (talicę powiązań symboli).
+\section{Wnioski}
+Obliczanie wartości dziesiętnej wprowadzanej liczby można by było zrealizować wraz z weryfikowaniem cyfr. Użycie funkcji do obliczania uzupełnienia liczby znacznie zmniejszyło by długość kodu programu i jednocześnie zwiększyło by czytelność. Warto też zauważyć, że na końcu tekstu wczytanego ze \textbf{stdin} znajduje się znak  nowej linii, co należy wziąć pod uwagę podczas indeksowania tego tekstu.
+\label{sec:wnioski}
+\end{document}
