@@ -1,16 +1,12 @@
 .section .data
     SYSEXIT = 60
     EXIT_SUCCESS = 0
-.section .bss
-.text
+.section .text
     .globl _start
 _start:
-
     pushq $2
     call evaluate_stack
     popq %rbx
-
-
 
 end:
     movq $SYSEXIT, %rax
