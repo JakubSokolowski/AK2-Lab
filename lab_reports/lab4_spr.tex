@@ -1,0 +1,235 @@
+\documentclass[11pt]{report}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{mathptmx}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{advdate}
+\usepackage{fancyvrb}
+\usepackage[none]{hyphenat}
+\usepackage{amsmath}
+\selectlanguage{polish}
+\usepackage[left=2.5cm,top=2.5cm,right=2.5cm,bottom=2.5cm,bindingoffset=0.5cm]{geometry}
+
+\title{Sprawozdanie AK2 lab3}
+\date{\today}
+\author{Jakub Sokołowski}
+\newcommand{\LabNum}{4}
+\setcounter{chapter}{\LabNum}
+\begin{document}
+\noindent
+Jakub Sokołowski, 226080
+  \hfill Wrocław, dn.\ {\AdvanceDate[-1]\today}\\
+WT-N-07\hfill  prowadzący: Aleksandra Postawka\\
+\vspace{1cm}
+\begin{center}
+  \begin{Large}
+  	Laboratorium Architektury Komputerów\\
+    \emph{(\LabNum) Funkcje i stos\\}
+  \end{Large}
+\end{center}
+
+
+\section{Treść ćwiczenia}
+\label{sec:tresc-cwiczenia}
+\textbf{Zakres i program ćwiczenia:}\\
+Tworzenie zwykłych i rekurencyjnych funkcji w assemblerze z wykorzystaniem stosu. Stos, to struktura danych typu \textit{LIFO - last in, first out}, w której dane są dokładane na wierzch stosu (instrukcja \textit{push}), i stamtąd też są pobierane (instrukcja \textit{pop}). Stos rośnie w odwrotnym kierunku do sterty - od wyższych adresów pamięci, do niższych. Dostęp do elementów stosu jest możliwy za pomocą rejestru \textit{\%rsp}, który wskazuje na wierzchołek stosu.\\\\
+\textbf{Zrealizowanie zadania:}
+\begin{itemize}[leftmargin=*,topsep=0pt]
+	\item{Funkcja zwracająca indeks początku najdłuższego ciągu zer w danym łańcuchu znaków}
+	\item{Funkcja rekurencyjna:
+	\[
+    f(x)=\left\{
+                \begin{array}{ll}
+                  x_0 = -2\\
+                  x_n = 5x_{n-1} + 7
+                \end{array}
+              \right.
+  \]
+  	\begin{enumerate}[label=(\alph*)]
+  		\item{Argument i wyniki przekazywane przez stos}
+  		\item{Argument i wyniki przekazywane przez rejestry}
+  	\end{enumerate}
+  	}
+\end{itemize}
+\newpage
+\section{Przebieg ćwiczenia}
+\subsection{Funkcje w assemblerze}
+W assemblerze funkcje deklarujemy w następujący sposób:
+\begin{verbatim}
+.type zero_str, @function
+zero_str:
+\end{verbatim}
+Pierwsza linia mówi linkerowi, że symbol \textit{zero\_str} ma być traktowany jako funkcja. Jeśli cały kod programu znajduje się w jednym pliku program zadziałałby też bez tej linii.\\
+Funkcje w assemblerze wykorzystują dwie specjalne instrukcje \textit{call} i \textit{ret}. Instrukcja \textit{call} ma dwa efekty: odkłada adres następnej instrukcji (adres powrotu) na stos, a następnie modyfikuje wskaźnik instrukcji \textit{\%rip}, tak aby wskazywał na początek wywoływanej funkcji. Instrukcja \textit{ret} ściąga wartość z wierzchołka stosu, i ustawia \textit{\%rip} na tę wartość.
+\\Pierwszym krokiem, jaki musi wykonać funkcja, jest zapisanie obecnego rejestru bazowego \textit{\%rbp} na stosie. Rejestr ten służy do dostępu do argumentów funkcji i zmiennych lokalnych. Jest on także stałym odniesieniem do ramki stosu (parametrów, zmiennych i adresu powrotu funkcji). Nie można do tego wykorzystać \textit{\%rsp}, ponieważ może być on modyfikowany przez inne funkcje podczas wykonywania programu.
+\\Przed powrotem z funkcji, należy zresetować stos, do stanu w jakim się znajdował zaraz po wywołaniu funkcji - pozbyć się obecnej ramki stosu, a przwrócić tą należącą do kodu wywołującego funkcję. 
+\begin{verbatim}
+movq %rbp, %rsp
+popq %rbp
+ret 
+\end{verbatim}
+Pierwsza instrukcja resetuje wskaźnik stosu, a druga wskaźnik bazowy. Teraz na górze stosu znajduje się adres powrotu, do którego powraca instrukcja ret.
+\label{sec:przebieg-cwiczenia}
+\subsection{Najdłuższy ciąg zer}
+Pierwszym zadaniem było napisanie funkcji znajdującej indeks początkowy najdłuższego ciągu zer w danym łańcuchu znaków. Jako parametr funkcja przejmuje wskaźnik na łańcuch znaku. Parametr ten jest przekazywany przez stos, więc wywołanie tej funkcji wygląda następująco:
+\begin{verbatim}
+mov $IN_BUF, %rbx
+  pushq %rbx
+  call  zero_str
+\end{verbatim}
+Działanie samej funkcji jest bardzo proste - funkcja iteruje po buforze wskazanym, aż natrafi na zero, wtedy iteruje dalej, zwiększając licznik zer, aż natrafi na znak który nie jest zerem. Po zakończeniu ciągu, jego długość jest porównywana z najdłuższą dotychczasową, a jeśli jest większa, to długość i indeks początkowy ciągu (indeks obecny - długość) są zapamiętywane.
+\begin{verbatim}
+.type zero_str, @function
+zero_str:
+    pushq %rbp              # Umieszczenie %rbp na stosie
+    movq  %rsp, %rbp        # Wskaźnik stosu wskazuje teraz na %rbp
+    movq  16(%rbp), %rbx    # Pierwszy argument funkcji do %rbx
+
+    # Iteracja po buforze
+    mov $0, %rdi            # Obecny indeks w buforze
+    mov $0, %rax            # Obecny znak
+    mov $0, %rcx            # Licznik zer
+    mov $-1, %r10           # Jeśli nie ma ciągu zer, wynik to -1
+    find_zero_loop:
+        mov (%rbx, %rdi, 1), %al
+        inc %rdi
+        cmp $'0', %al       
+        je count_zeros      # Znak jest zerem
+        cmp $NEWLINE, %al    
+        je end_zero_str     # Znak '\n' - koniec bufora
+        jmp find_zero_loop  # Inny znak, następna iteracja
+        count_zeros:
+            inc %rcx        # Zwiększenie licznika zer
+            count_loop:           
+                mov (%rbx, %rdi, 1), %al
+                inc %rdi
+                cmp $'0', %al
+                je count_zeros
+                # Koniec ciągu zer, sprawdzenie długości 
+                cmp %r8, %rcx
+                jl find_zero_loop
+            new_record:
+                # Długość jest większa niż obecna największa, zapisanie
+                # obecnego indeksu
+                mov %rcx, %r8
+                mov $0, %rcx
+                dec %rdi
+                mov %rdi, %r10
+                sub %r8, %r10
+                jmp find_zero_loop
+    end_zero_str:
+      movq %r10, %rax
+      movq %rbp, %rsp
+      popq %rbp
+      ret 
+\end{verbatim}
+
+\subsection{Zapis w kolejności little endian}
+\subsection{}
+Po zapisaniu do pamięci liczb w poprawnej kolejności, można przystąpić do dodawania. Żeby zapewnić poprawną propagację przeniesienia, wykorzystywana jest instrukcja adc, która bierze pod uwagę flage przeniesienia (CF). Ta sama flaga jest modyfikowana podczas instrukcji \textbf{cmp} która jest wykonywana podczas pętli. W celu zachowania wartości CF, po dodaniu liczb rejestr flagowy umieszczany jest na stosie za pomocą instrukcji \textbf{pushfq}, a przed dodaniem jest pobierany ze stosu za pomocą instrukcji \textbf{popfq}. Ponieważ bufory liczb mają po 512 bajtów, a dodawanie jest wykonywane w rejestrach 64 bitowych, pętla dodawania wykona co najwyżej 64 iteracje.
+\begin{verbatim}
+add_numbers:
+  clc           # Ustawienie flagi CF na 0
+  pushfq        # Umieszczenie rejestru flag na stosie
+  mov $0, %rsi
+  
+  add_loop:
+    mov FIRST_NUM_BUFF(, %rsi, 8), %rax
+    mov SECOND_NUM_BUFF(, %rsi, 8), %rbx
+    popfq           # Pobranie rejestru flag ze stotsu
+    adc %rbx, %rax  # Dodanie liczb z uwzględnieniem flagi przeniesienia
+    pushfq          # Umieszczenie rejestru flag na stosie
+    mov %rax, OUT_BUF(,%rsi, 8)
+    inc %rsi
+    cmp $64, %rsi
+    jl add_loop
+\end{verbatim}
+\subsection{Konwersja na reprezentację szesnastkową}
+Ponieważ wynik dodawania jest zapisany jako ciąg binarny, konwersja jest stosunkowa prosta - należy pogrupować ten ciąg w grupy po 4 bity, i wstawić znak odpowiadający danej cyfrze w grupie do bufora wyjściowego.
+\begin{verbatim}
+convert_loop:
+  mov OUT_BUF(,%rdi, 1), %al     # Wstawienie kolejnego bajtu do %al
+  mov %al, %bl						
+  shr $4, %bl
+  and $0b1111, %al               # W %al znajdą się pierwsze 4 bity  
+  and $0b1111, %bl               # a w %bl ostatnie
+  mov HEX_CHARS(,%rax,1), %cl    # Wstawienie znaku odpowiadającego cyfrze do %cl
+  mov %cl, OUT_HEX_BUF(,%rsi,1)  # Wstawienie %cl do bufora wyjściowego
+  inc %rsi
+  mov HEX_CHARS(,%rbx,1), %cl
+  mov %cl, OUT_HEX_BUF(,%rsi,1)
+  inc %rsi
+  inc %rdi
+  cmp $512, %rdi
+  jl convert_loop
+\end{verbatim}
+\subsection{Odwrócenie bufora wyjściowego}
+W buforze wyjściowym znajduje się teraz odwrócony wynik dodawania, który jest zakończony ciągiem zer (bufory traktowane są jak liczby, nawet jeśli są w nich same zera). W celu zapisania prawidłowego wyniku do pliku, należy pozbyć się tych zer, i odwrócić kolejność cyfr.
+\begin{verbatim}
+reverse_out:
+  mov $0, %rsi             
+  mov $512, %rdi
+  mov $0, %rax
+  mov $0, %rbx
+  mov $0, %rcx          # Jeśli %rcx jest równy 1, znaczy że obecny znak jest
+                        # cyfrą liczby, nawet jeśli jest równy 0
+  reverse_loop:
+    cmp $0 ,%rdi
+    jl end_reverse
+    mov OUT_HEX_BUF(,%rdi,1), %al
+    dec %rdi
+    cmp $'0', %al        # Jeśli znak nie jest zerem, to jest cyfrą liczby
+    jne place_char
+    cmp $0, $rcx         # Jeśli znak jest zerem, i %rcx jest równe 1, to jest
+    je reverse_loop      # cyfrą liczby
+    
+    place_char:
+      mov $1, %rcx
+      mov %al, OUT_BUF(,%rsi,1)
+      inc %rsi
+      jmp reverse_loop
+      
+  end_reverse:
+    movb $0x0A, OUT_BUF(,%rsi,1) # Wstawienie znaku nowej lini na koniec bufora
+    inc %rsi
+    mov $0, %rdi
+    mov %rsi, %rbx      # Ostateczna długość bufora wyjściowego
+
+\end{verbatim}
+\newpage
+\subsection{Zapis wyniku do pliku}
+Zapisywanie do pliku za pomocą wywołania systemowego wymaga trzech argumentów: deskryptora pliku, do którego chcemy zapisać, wskaźnika na początek bufora, oraz rozmiaru tego bufora.
+Deskryptor pliku uzyskujemy tak samo jak w przypadku pliku wejściowego, za pomocą wywołania \textbf{open}. Długość bufora została obliczona w poprzednim kroku, i znajduje się w rejestrze \textbf{\%rbx}.
+\begin{verbatim}
+open_out:
+  # Otworzenie pliku wyjściowego za pomocą wywołania systemowego open
+  mov $SYSOPEN,  %rax
+  mov $FILE_OUT, %rdi 
+  mov $FWRITE,   %rsi 
+  mov $0644,     %rdx  # Właściciel musi mieć prawo do zapisu
+  syscall
+  mov %rax, %r9        # Zapisanie deskryptora pliku wyjściowego
+  
+write_out:
+  # Zapis do pliku
+  movq $SYSWRITE,    %rax
+  movq %r9,          %rdi
+  movq $OUT_BUF,     %rsi
+  movq %rbx,         %rdx
+  
+close_out:
+  # Zamknięcie pliku wyjściowego
+  mov $SYSCLOSE, %rax # Pierwszy parametr - numer wywołania
+  mov %r9, %rdi       # Drugi parametr - ID otwartego pliku
+  mov $0, %rsi
+  mov $0, %rdx
+  syscall
+\end{verbatim}
+\section{Wnioski}
+Podczas operacji na plikach, trzeba szczególnie uważać na ich uprawnienia, ponieważ można przypadkowo utworzyć plik, którego obecny użytkownik nie będzie mógł odczytać.\\
+Zamiana kolejności z big endian na little endian, w retrospekcji, mogła być zrealizowana za pomocą gotowych instrkucji służących do tego celu takich jak \textbf{bswp}.
+\label{sec:wnioski}
+\end{document}
