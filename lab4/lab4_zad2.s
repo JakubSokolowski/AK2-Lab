@@ -4,7 +4,7 @@
 .section .text
     .globl _start
 _start:
-    pushq $2
+    pushq $5
     call evaluate_stack
     popq %rbx
 
@@ -27,7 +27,7 @@ evaluate_stack:
     imulq $5, %rax
     add $7, %rax
     jmp end_evaulate_stack
-    base_case_2:        # last call to factorial
+    base_case_2: 
         mov $-2, %rax
  
     end_evaulate_stack:
