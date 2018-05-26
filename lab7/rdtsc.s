@@ -25,8 +25,6 @@ scalar_sse:
 	push %rsi
 	push %rdi
 	# %rdi *s1, %rsi *s2, %rax %rdx *size
-
-	# Number of iterations is size / 4
 	mov %rdx, %rax
 	xor %rdx, %rdx
 	

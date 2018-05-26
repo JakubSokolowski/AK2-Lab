@@ -22,7 +22,7 @@ evaluate_stack:
     cmpq  $0, %rax       # If the number is 0, return -2
     je base_case_2
     decq  %rax           # Otherwise, decrease the value
-    pushq %rax           # Push the arg for next ca;;
+    pushq %rax           # Push the arg for next ca;s;
     call  evaluate_stack
     imulq $5, %rax
     add $7, %rax
@@ -30,7 +30,7 @@ evaluate_stack:
     base_case_2: 
         mov $-2, %rax
  
-    end_evaulate_stack:
+    send_evaulate_stack:
         movq %rbp, %rsp  
         popq %rbp
         popq %rbx   # Save the return adress
