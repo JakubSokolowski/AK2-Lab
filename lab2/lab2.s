@@ -242,7 +242,7 @@ complement_result:
             inc %eax
             mov %eax, NUM_ARR(, %rdi,4)
             mov $0, %rdi
-            jmp int_to_ascii, korzystając z tego samego kodu.
+            jmp int_to_ascii
 
         shift_and_insert_2:
             # Shift all the digits right by one position

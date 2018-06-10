@@ -193,7 +193,7 @@ reverse_out:
     dec %rdi
     cmp $'0', %al
     jne place_char
-    cmp $0, $rcx
+    cmp $0, %rcx
     je reverse_loop
     place_char:
       mov $1, %rcx

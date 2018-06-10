@@ -11,7 +11,6 @@
 .section .text
 .globl main
 main:
-
     # Read the numbers with scanf
     mov $0, %rax
     mov $format_in, %rdi
