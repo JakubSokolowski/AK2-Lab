@@ -30,7 +30,7 @@ syscall
 # Store the length of input sequence in R8 and reset the RDI counter register
 mov %rax, %r8
 mov $0,   %rdi
-
+mov $0,   %rsi
 
 # A - 41 - 0100 0001
 # @ - 40 - 0100 0001
@@ -42,8 +42,8 @@ xor_loop:
     # Two cases for going out of range: 
     # Uppercase letters and lowercase letters
     mov %ah, %al
-    cmp $0x41, %al
-    jl end_loop
+    cmp $0x20, %al
+    je skip_space
     # Apply the shift to value
     ADD $SHIFT, %ah
     cmpb $0x5A, %al
@@ -57,12 +57,16 @@ xor_loop:
     jmp end_loop   
     uppercase:
     # The value is uppercase, check if after adding
-    # it exceeds the upper_bound, if so subtract 
+    # it exceeds the upper_bound, if so subtract
     cmpb $0x5A, %ah
-    jl end_loop
+    jl end_upper
     sub $26, %ah
+    end_upper:
+    xorb $0x20, %ah 
     end_loop:
-    movb %ah, OUT_BUF(, %rdi, 1)
+    movb %ah, OUT_BUF(, %rsi, 1)
+    inc %rsi
+    skip_space:
     inc %rdi
     cmp %r8, %rdi
     jl xor_loop
