@@ -42,6 +42,8 @@ xor_loop:
     # Two cases for going out of range: 
     # Uppercase letters and lowercase letters
     mov %ah, %al
+    cmp $0x41, %al
+    jl end_loop
     # Apply the shift to value
     ADD $SHIFT, %ah
     cmpb $0x5A, %al
@@ -77,7 +79,3 @@ syscall
 mov $SYSEXIT, %rax
 mov $EXIT_SUCCESS, %rdi
 syscall
-
-
-    
- 
