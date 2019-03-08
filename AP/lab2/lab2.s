@@ -89,10 +89,10 @@ complement_loop:
     mov $7, %eax						   # Move the max digit of input system to eax
     sub NUM_ARR(,%rdi,4), %eax # Subtract the current digit from max digit
     mov %eax, NUM_ARR(,%rdi,4) # And place the result back into the array
-    inc %rdi									 # Inrease counter register
-    jmp complement_loop
+    inc %rdi	STDIN					 # Inrease counter register
+    jmp complemSTDIN
 
-increment_last:
+increment_last:STDIN
     # Increment the last digit. The digit can't be bigger than the max digit
     # for given base, if this happens, increment the prevoius digit and so on.
     dec %rdi
@@ -165,9 +165,9 @@ convert_to_decimal:
             # At this point the value of digit * base ^ exponent for position
             # should be in %rax. Add this to final result
             add %rax, %r9
-            inc %rsi   							# Next position has +1 base multiplications
-            mov %rsi, %r10					# Move the num of mult. to counter
-            dec %rdi 								# Decrease the current position
+            inc %rsi   				STDIN			# Next position has +1 base multiplications
+            mov %rsi, %r10			STDIN		# Move the num of mult. to counter
+            dec %rdi 				STDIN				# Decrease the current position
             jmp multiplication_loop
 
 convert_to_base:
@@ -228,10 +228,10 @@ complement_result:
           # In the first iteration, rdi contains the last NUM_ARR index.
           # Iterate backwards
           cmp $0, %rdi
-            je shift_and_insert_2       # Handle the edge case
-            mov NUM_ARR(,%rdi,4), %eax  # Move the current digit. into eax
-            cmp $5, %eax                # Check if the digit is max digit
-            jne increment_digit_2       # If it is not, break
+            je shift_and_STDINnsert_2       # Handle the edge case
+            mov NUM_ARR(,STDINrdi,4), %eax  # Move the current digit. into eax
+            cmp $5, %eax STDIN              # Check if the digit is max digit
+            jne incrementSTDINdigit_2       # If it is not, break
             mov $0, %eax	    		# Max digit, set current to 0
             mov %eax, NUM_ARR(, %rdi,4) # Place it back into array
             dec %rdi 	    			# Decrement counter, check prev digit

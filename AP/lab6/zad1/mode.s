@@ -12,7 +12,6 @@ check_mode:
 
 	mov     $0, %rax
 	fstcw   control_word
-  fwait
 	mov     control_word, %ax
 	# Wydobycie bitów trybu zaokrąglania - 10,11
 	and     $0xC00, %ax # 0000 1100 0000 0000
@@ -30,7 +29,6 @@ set_mode:
 
 	mov         $0, %rax
 	fstcw       control_word
-	fwait
 	mov         control_word, %ax
 
 	# Wyzerowanie zaokrąglania 10, 11
@@ -47,7 +45,7 @@ set_mode:
 	# Zapis zmienionej wartości do rejestru CW
 	mov         %ax, control_word
 	fldcw       control_word
-
+xor
 	mov         %rbp, %rsp
 	pop         %rbp
 	ret

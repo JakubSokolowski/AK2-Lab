@@ -18,7 +18,7 @@ exp_approx:
         cmp $0, %rdi
         je end_approx
         call factorial       # Compute factorial for n, result in %rax
-        movsd num, %xmm0   # Compute x ^ n, result in %xmm0
+        movsd num, %xmm0     # Compute x ^ n, result in %xmm0
         call power
         cvtsi2sd %rax, %xmm1 # Convert the factorial into double, for division
         divsd %xmm1, %xmm0   # Divide the x ^ n by factorial, store in %xmm2
@@ -56,16 +56,28 @@ power:
     push %rbp
     mov %rsp, %rbp
     push %rdi
+    sub $8, %rsp
+    movsd %xmm0, (%rsp)
+    fldl (%rsp)
+    fld %st
+    fwait
     movsd %xmm0, %xmm1
     power_loop:
         cmp $1, %rdi
         je end_power
         dec %rdi
-        mulsd %xmm1, %xmm0
+        fmul %st, %st(1)
+        fwait
         jmp power_loop
     end_power:
-    pop %rdi
-    leave
+        fstp %st
+        fstpl (%rsp)
+        movsd (%rsp), %xmm0
+        add $8, %rsp
+        pop %rdi
+        fstp %st
+        fstp %st
+        leave
 ret
     
     
