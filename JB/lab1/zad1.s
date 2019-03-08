@@ -45,7 +45,8 @@ xor_loop:
     cmp %r8, %rdi
     jl xor_loop
 # null terminate the str
-movb $0x0, IN_BUF(, %rdi, 1)
+dec %rdi
+movb $0xA, IN_BUF(, %rdi, 1)
 # display the output buffer
 mov $SYSWRITE, %rax
 mov $STDOUT, %rdi

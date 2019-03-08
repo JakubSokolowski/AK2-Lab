@@ -44,12 +44,12 @@ xor_loop:
     mov %ah, %al
     # Apply the shift to value
     ADD $SHIFT, %ah
-    cmpb $0x7A, %al
+    cmpb $0x5A, %al
     jle uppercase 
     lowercase:
     # The value is lowercase, check if after adding
     # it exceeds the upper_bound, if so subtract 
-    cmp $0x5A, %ah
+    cmpb $0x7A, %ah
     jl end_loop
     sub $26, %ah
     jmp end_loop   
@@ -64,7 +64,7 @@ xor_loop:
     inc %rdi
     cmp %r8, %rdi
     jl xor_loop
-# null terminate the str
+
 dec %rdi
 movb $0xA, IN_BUF(, %rdi, 1)
 # display the output buffer
