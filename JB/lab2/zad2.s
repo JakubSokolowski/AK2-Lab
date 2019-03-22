@@ -82,11 +82,12 @@ validation_loop:
     sub $0x30, %al              # Subtract zero char from ASCII value in al to get
                                 # it's integer value
 
-#    cmp $9, %al                 # Integer value in %al must be between 0 and 7
-#    jge write_err_msg           # Error, if value is greater than 7
-#    cmp $0, %al                 # or smaller than 0
-#    jl write_err_msg
-#    # Validation passed, write the number to NUM_ARR, increase counters
+    cmp $9, %al                 # Integer value in %al must be between 0 and 7
+    jge write_err_msg           # Error, if value is greater than 7
+    cmp $0, %al                 # or smaller than 0
+    jl write_err_msg
+    convert_chars
+    # Validation passed, write the number to NUM_ARR, increase counters
     mov %al, NUM_ARR(, %rdi, 4) # Save one int at a time
     inc %rdi
     jmp validation_loop

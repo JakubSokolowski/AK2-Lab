@@ -13,3 +13,8 @@ zad2: zad2.o
 zad2.o : zad2.s
 	as -gstabs -o zad2.o zad2.s
 
+
+zad3: zad3.o
+	ld  -o zad3 zad3.o
+zad3.o : zad3.s
+	as -gstabs -o zad3.o zad3.s

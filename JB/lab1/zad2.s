@@ -34,7 +34,7 @@ mov $0,   %rsi
 
 # A - 41 - 0100 0001
 # @ - 40 - 0100 0001
-# print values at address in register
+# print values at address in registerc
 # x/10c $rsi
 xor_loop:
     # load the character into the AH register
@@ -57,7 +57,7 @@ xor_loop:
     jmp end_loop   
     uppercase:
     # The value is uppercase, check if after adding
-    # it exceeds the upper_bound, if so subtract
+    # it exceedis the upper_bound, if so subtract
     cmpb $0x5A, %ah
     jl end_upper
     sub $26, %ah

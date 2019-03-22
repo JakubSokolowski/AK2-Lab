@@ -3,7 +3,9 @@
 STDIN = 0
 STDOUT = 1
 SYSREAD = 0
-SYSWRITE = 1
+SYSWRITE = 1mov $SYSEXIT, %rax
+mov $EXIT_SUCCESS, %rdi
+syscall
 SYSEXIT = 60
 EXIT_SUCCESS = 0
 BUFLEN = 512
@@ -56,8 +58,5 @@ syscall
 
 mov $SYSEXIT, %rax
 mov $EXIT_SUCCESS, %rdi
-syscall
-
-
-    
+syscall    
  
