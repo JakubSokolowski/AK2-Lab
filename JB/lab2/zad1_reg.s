@@ -23,7 +23,7 @@ add:
     
     add %rbx, %rcx    # add numbers
     mov %rcx, %rax    # function resut is in %eax
-    imul %rcx, %rax
+    mul %rcx, %rax
 
     end_add:
         movq  %rbp, %rsp
