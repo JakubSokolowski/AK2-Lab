@@ -1,0 +1,12 @@
+FUNKCJE:
+1) Funkcja:   
+    - przekazywanie parametrów przez rejestry
+    - przekazywanie parametrów przez stos + debugger
+2) Funkcja:
+    - która oblicza wartość liczby danej za pomocą ciągu cyfr
+(dziesiętnych, osóemkowych) o dowolnej podstawie
+3) Funkcja rekurencyjna:
+    - przekazywanie parametrów przez stos
+    - silinia dla arg. o rozmiarze > rozmiar słowa
+    - kombinacje (M po K)
+    - dozwolony zakres argumnetów ?
