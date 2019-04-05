@@ -5,6 +5,7 @@
     format: .ascii "Number in base 8: %s\n\0"
 .section .bss
     .lcomm OUT_BUF, 64
+    .lcomm REV_NUM_ARR, 64
 .section .text
 .globl main
 main:
@@ -34,11 +35,19 @@ main:
             add $0x30, %eax
             mov %al, OUT_BUF(,%rdi,1)
             mov %rdi, %r8	
+    reverse_loop: 
+        cmp $0, %rdi
+        jl end
+        mov ($OUT_BUF, %rdi,1), %al
+        mov %al, ($REV_NUM_ARR, %rsi, 1)
+        inc %rsi
+        dec %rdi
+        jmp reverse_loop;
     end:
 
         mov $0, %rax
         mov $format, %rdi
-        mov $OUT_BUF, %rsi
+        mov $REV_NUM_ARR, %rsi
         call printf
 
         movq $SYSEXIT, %rax
