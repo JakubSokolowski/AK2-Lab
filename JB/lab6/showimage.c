@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 void Filter(unsigned char * buf, int width,int height,int size,char bpp) ;
 
 
@@ -24,8 +25,6 @@ void Paint(SDL_Surface* image, SDL_Surface* screen)
 		SDL_BlitSurface(image, NULL, screen, NULL);
 		SDL_UpdateRect(screen, 0, 0, 0, 0);
 };
-
-
 
 
 

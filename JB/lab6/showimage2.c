@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <SDL2/SDL.h> //SDL - Simple DirectMedia Layer*/
-#include <SDL2/SDL_image.h>
+#include <SDL/SDL.h> //SDL - Simple DirectMedia Layer*/
+#include <SDL/SDL_image.h>
 
 // otwarcie pliku bmp*/
 void Filter(unsigned char *buf, int width,int height,int size, char bpp) ;
@@ -10,7 +10,7 @@ void Filter(unsigned char *buf, int width,int height,int size, char bpp) ;
 SDL_Surface *Load_image(char *file_name) {
     SDL_Surface *tmp = IMG_Load(file_name); // Otwórz plik z obrazem*/
     if (tmp == NULL) {
-        fprintf(stder, "Couldn't load %s: %s\n", file_name, SDL_GetEror());
+        fprintf(stderr, "Couldn't load %s: %s\n", file_name, SDL_GetEror());
         exit(0);
     }
     return tmp;
@@ -20,7 +20,7 @@ SDL_Surface *Load_image(char *file_name) {
 void Paint(SDL_Surface *image, SDL_Surface *screen) {
     SDL_BlitSurface(image, NULL, screen, NULL);
     if(SDL_BlitSurface(image, NULL, screen, NULL)<0)
-    fprintf(stder, "BlitSurface eror: %s\n", SDL_GetEror());
+    fprintf(stderr, "BlitSurface eror: %s\n", SDL_GetEror());
     SDL_UpdateRect(screen, 0, 0, 0, 0);
 };
 
@@ -31,15 +31,15 @@ int main(int argc, char *argv[]) {
     SDL_Event
     SDL_Event event;
     if (!argv[1]) { // Check command line usage
-        fprintf(stder, "Usage: %s <image_file>, (int) size\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image_file>, (int) size\n", argv[0]);
         return(1);
     }
     if (!argv[2]) {
-        fprintf(stder, "Usage: %s <image_file>, (int) size\n", argv[0]);
+        fprintf(stderr, "Usage: %s <image_file>, (int) size\n", argv[0]);
         return(1);
     }
     if (SDL_Init(SDL_INIT_VIDEO)<0) {
-        fprintf(stder, "Couldn't initialize SDL: %s\n",SDL_GetEror());
+        fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetEror());
         return(255);
     }
     // OK można zaczynać 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     flags |= SDL_HWPALETTE;
     screen = SDL_SetVideoMode(image->w, image->h, depth, flags);
     if (screen==NULL) {
-        fprintf(stder,"Couldn't set %dx%dx%d video mode: %s\n",
+        fprintf(stderr,"Couldn't set %dx%dx%d video mode: %s\n",
         image->w, image->h, depth, SDL_GetEror());
         exit(1);
     }
