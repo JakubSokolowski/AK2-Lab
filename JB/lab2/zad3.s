@@ -4,7 +4,7 @@
 .section .text
     .globl _start
 _start:
-    pushq $5
+    pushq $21
     call factorial
     popq %rbx
 

@@ -8,7 +8,6 @@ _start:
     pushq $3
     
     call mul_stack
-    popq %rbx
 
 end:
     movq $SYSEXIT, %rax
@@ -21,11 +20,11 @@ mul_stack:
     movq  %rsp, %rbp
 
     movq  16(%rbp), %rbx # This moves the first argument to %rax
-    movq  (%rbp), %rcx
+    movq  24(%rbp),  %rcx
 
     add %rbx, %rcx    # add numbers
     mov %rcx, %rax    # function resut is in %eax
-    imul %rcx, %rax
+    mul %rcx
 
     mul_stack_end:
         movq  %rbp, %rsp

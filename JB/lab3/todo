@@ -1,0 +1,3 @@
+- dyrektywy external, global, jak działa dołączanie bibliotek
+1. Wykorzystanie w asm podstawowych funkcji w języku C, w wersjach 32b i 64b
+2. Z poziomu języka C wywołać f-cje asm

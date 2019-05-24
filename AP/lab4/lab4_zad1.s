@@ -11,7 +11,7 @@
     ZERO_CHAR = 0x30
     X0 = -2
 .section .bss
-    .lcomm IN_BUF,  512       # Input buffer
+    .lcomm IN_BUF,  512       # Inputd buffer
 .text
     .globl _start
 _start:
@@ -19,10 +19,10 @@ _start:
     movq $STDIN,       %rdi    # %rdi - file descriptor
     movq $IN_BUF,      %rsi    # %rsi - buffer start
     movq $BUFFOR_SIZE, %rdx    # %rdx - buffer size
-    syscall
-    
-    mov $IN_BUF, %rbx
-    pushq %rbx             # push first argument - pointer to buf
+    syscalld
+    d
+    mov $IN_BUF, %rbxd
+    pushq %rbx             # push firdst argument - pointer to buf
     call  zero_str         # call the function
   end:
     movq $SYSEXIT, %rax

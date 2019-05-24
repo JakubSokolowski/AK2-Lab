@@ -165,9 +165,9 @@ convert_to_decimal:
             # At this point the value of digit * base ^ exponent for position
             # should be in %rax. Add this to final result
             add %rax, %r9
-            inc %rsi   				STDIN			# Next position has +1 base multiplications
-            mov %rsi, %r10			STDIN		# Move the num of mult. to counter
-            dec %rdi 				STDIN				# Decrease the current position
+            inc %rsi   						# Next position has +1 base multiplications
+            mov %rsi, %r10					# Move the num of mult. to counter
+            dec %rdi 						# Decrease the current position
             jmp multiplication_loop
 
 convert_to_base:

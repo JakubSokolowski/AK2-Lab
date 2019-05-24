@@ -1,26 +1,16 @@
-.section .data
-    format_in: .ascii "%d\0"
-    msg: .ascii "Hello World!!\n\0"
-    format_out: .ascii "Wynik: %d\n\0"
+ .data
+    format_out: .ascii "%d\n\0"
 
-.section .bss
-    .comm x_int, 4
-    .comm y_float, 4
-    .comm z_double, 8
-    
-.section .text
+.text
 .globl main
 main:
     # Read the numbers with scanf
    
 
     # Print the numbers with 
-    mov $0, %rax
-    mov $msg, %rdi
-    call printf
-    mov $0, %rax
-    mov $format_out, %rdi
-    mov $2, %rsi
+    mov $0, %eax
+    mov $format_out, %edi
+    mov $1001, %esi
     call printf
 
     call exit

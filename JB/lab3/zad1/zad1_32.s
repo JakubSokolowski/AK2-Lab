@@ -1,6 +1,6 @@
 .section .data
     format_in: .ascii "%d\0"
-    msg: .ascii "Hello World!\n\0"
+    msg: .ascii "Hello World %d!\n\0"
     format_out: .ascii "Wynik: %d\n\0"
 
 .section .bss
@@ -16,7 +16,10 @@ main:
 
     # Print the numbers with 
     mov $msg, %eax
+    mov $2, %ebx
+    push %ebx
     push %eax
+   
     call printf
 
 

@@ -2,11 +2,13 @@
     NUMBER = 1263
    	SYSEXIT = 60
     EXIT_SUCCESS = 0
+    msg: .ascii "Hello World!!\n\0"
 .section .bss
     .lcomm OUT_BUF, 64
 .section .text
 .globl _start
 _start:
+
 
     convert_to_base:
         # r8  - size of NUM_ARR

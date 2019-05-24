@@ -38,8 +38,8 @@ main:
     reverse_loop: 
         cmp $0, %rdi
         jl end
-        mov ($OUT_BUF, %rdi,1), %al
-        mov %al, ($REV_NUM_ARR, %rsi, 1)
+        mov (OUT_BUF, %rdi,1), %al
+        mov %al, (REV_NUM_ARR, %rsi, 1)
         inc %rsi
         dec %rdi
         jmp reverse_loop;

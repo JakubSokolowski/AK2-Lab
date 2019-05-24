@@ -3,6 +3,7 @@
 extern int check_mode();
 extern int set_mode(int mode);
 
+
 int main(void) {
   int option=1, mode=1;
 	do {
@@ -31,10 +32,11 @@ int main(void) {
 			    if (mode > 3 || mode < 0) 
 						printf("Invalid value");
 			    else 
-						set_mode(mode);
+ 						set_mode(mode);
 			    printf("\n");
 			    break;
 	  }
 	} while(option!=0);
+	printf("Rounding mode decided. Proceeding with program execution...");
 	return 0;
 }

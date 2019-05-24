@@ -43,33 +43,16 @@
 .globl _start
 
 _start:
-# movq $SYSWRITE,      %rax   # %rax - 1 (code for # Move the buffor address to rcxwrite)
-# movq $STDOUT,        %rdi   # %rdi - file descriptor
-# movq $msg_radix,     %rsi   # %rsi - buffer start
-# movq $msg_radix_size,%rdx   # %rdx - buffer size
-# syscall
+movq $SYSREAD,     %rax    # %rax - 0 (code for read)
+movq $STDIN,       %rdi    # %rdi - file descriptor
+movq $IN_BUF,      %rsi    # %rsi - buffer start
+movq $BUFFOR_SIZE, %rdx    # %rdx - buffer size
+syscall
 
-# movq $SYSWRITE,      %rax   # %rax - 1 (code for # Move the buffor address to rcxwrite)
-# movq $STDOUT,        %rdi   # %rdi - file descriptor
-# movq $msg_input,     %rsi   # %rsi - buffer start
-# movq $msg_input_size,%rdx   # %rdx - buffer size
-# syscall
-
-# call add
-
-
-  # Load necessary arguments for read SYSCALL
-  # to their coresponding registers
-    movq $SYSREAD,     %rax    # %rax - 0 (code for read)
-    movq $STDIN,       %rdi    # %rdi - file descriptor
-    movq $IN_BUF,      %rsi    # %rsi - buffer start
-    movq $BUFFOR_SIZE, %rdx    # %rdx - buffer size
-    syscall
-
-    movq %rax, %r8             # Save the actual input size
-    dec %r8                    # The last char is newline
-                               # Don't iterate over it
-    movq $0, %rdi              # Reset the counter register
+movq %rax, %r8             # Save the actual input size
+dec %r8                    # The last char is newline
+                            # Don't iterate over it
+movq $0, %rdi              # Reset the counter register
 
 # Loop through chars in buffer, and check if they match
 # the system base
@@ -86,7 +69,7 @@ validation_loop:
     jge write_err_msg           # Error, if value is greater than 7
     cmp $0, %al                 # or smaller than 0
     jl write_err_msg
-    convert_chars
+    convert_chars:
     # Validation passed, write the number to NUM_ARR, increase counters
     mov %al, NUM_ARR(, %rdi, 4) # Save one int at a time
     inc %rdi
